@@ -1,0 +1,6 @@
+module main;
+
+main: (argc: int, argv: **u8) -> int {
+	print("Hello World!\n");
+}
+

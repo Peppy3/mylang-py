@@ -3,114 +3,113 @@ from dataclasses import dataclass
 
 from tokens import Token
 
-def tab(num):
-	return "  " * num
-
-class AstVisitor(ABC):
-	@abstractmethod
-	def visit(self, node):
-		raise NotImplemented
-
 def walk_func(func):
-	def f(self, visitor):
-		visitor = visitor.visit(self)
-		if visitor is None: 
-			return None
-		func(self, visitor)
-		visitor.visit(None)
+    def f(self, visitor):
+        visitor = visitor.visit(self)
+        if visitor is None: 
+            return None
+        func(self, visitor)
+        visitor.visit(None)
 
-	return f
+    return f
 
 def walk_list(l, visitor):
-	for node in l:
-		visitor.visit(node)
+    for node in l:
+        visitor.visit(node)
 
-class AstNode(ABC):
-	@abstractmethod
-	def walk(self, visitor):
-		raise NotImplemented
-	
-	def isa(self, cls):
-		return isinstance(self, cls)
+class Node(ABC):
+    @abstractmethod
+    def walk(self, visitor):
+        raise NotImplementedError
+    
+    def isa(self, cls):
+        return isinstance(self, cls)
+    
+@dataclass(slots=True, repr=True)
+class Literal(Node):
+    token: Token
 
-@dataclass
-class Literal(AstNode):
-	tok: Token
-
-	@walk_func
-	def walk(self, visitor):
-		pass
-
-
-@dataclass
-class CallExpr(AstNode):
-	func: Token
-	args: list
-	
-	@walk_func
-	def walk(self, visitor):
-		for arg in args: arg.val.walk(visitor)
-
-@dataclass
-class PostfixExpr(AstNode):
-	op: Token
-	val: AstNode
-	
-	@walk_func
-	def walk(self, visitor):
-		if self.val is not None: self.val.walk(visitor)
-
-@dataclass
-class UnaryExpr(AstNode):
-	op: Token
-	val: AstNode
-
-	@walk_func
-	def walk(self, visitor):
-		if self.val is not None: self.val.walk(visitor)
+    @walk_func
+    def walk(self, visitor):
+        pass
 
 
-@dataclass
-class BinaryExpr(AstNode):
-	op: Token
-	lhs: AstNode
-	rhs: AstNode
-	
-	@walk_func
-	def walk(self, visitor):
-		if self.lhs is not None: self.lhs.walk(visitor)
-		if self.rhs is not None: self.rhs.walk(visitor)
+@dataclass(slots=True, repr=True)
+class CallExpr(Node):
+    func: Token
+    args: list
+    
+    @walk_func
+    def walk(self, visitor):
+        for arg in args: arg.val.walk(visitor)
 
-@dataclass
-class FuncType(AstNode):
-	args: list
-	ret: AstNode
+@dataclass(slots=True, repr=True)
+class PostfixExpr(Node):
+    op: Token
+    expr: Node
+    
+    @walk_func
+    def walk(self, visitor):
+        if self.val is not None: self.val.walk(visitor)
 
-	@walk_func
-	def walk(self, visitor):
-		for arg in self.args: visitor.visit(arg)
-		
-		visitor.visitor(self.ret)
+@dataclass(slots=True, repr=True)
+class UnaryExpr(Node):
+    op: Token
+    expr: Node
+
+    @walk_func
+    def walk(self, visitor):
+        if self.expr is not None: self.expr.walk(visitor)
 
 
-@dataclass
-class Declaration(AstNode):
-	name: Token
-	type: AstNode
-	expr: AstNode | None
+@dataclass(slots=True, repr=True)
+class BinaryExpr(Node):
+    op: Token
+    lhs: Node
+    rhs: Node
+    
+    @walk_func
+    def walk(self, visitor):
+        if self.lhs is not None: self.lhs.walk(visitor)
+        if self.rhs is not None: self.rhs.walk(visitor)
 
-	@walk_func
-	def walk(self, visitor):
-		if self.type is not None: self.type.walk(visitor)
-		if self.expr is not None: self.expr.walk(visitor)
+@dataclass(slots=True, repr=True)
+class FuncType(Node):
+    args: list
+    ret: Node
 
-@dataclass
-class Module(AstNode):
-	name: Token 
-	statements: list
-	
-	@walk_func
-	def walk(self, visitor):
-		for stmt in self.statements: visitor.visit(self)
+    @walk_func
+    def walk(self, visitor):
+        for arg in self.args: visitor.visit(arg)
+        
+        visitor.visitor(self.ret)
+
+@dataclass(slots=True, repr=True)
+class ReturnStmt(Node):
+    expr: Node | None
+
+    @walk_func
+    def walk(self, visitor):
+        if self.expr is not None: self.expr.walk(visitor)
+
+@dataclass(slots=True, repr=True)
+class Declaration(Node):
+    name: Token
+    type_expr: Node
+    expr: Node | None
+
+    @walk_func
+    def walk(self, visitor):
+        if self.type_expr is not None: self.type_expr.walk(visitor)
+        if self.expr is not None: self.expr.walk(visitor)
+
+@dataclass(slots=True, repr=True)
+class Module(Node):
+    name: Token 
+    statements: list
+    
+    @walk_func
+    def walk(self, visitor):
+        for stmt in self.statements: visitor.visit(self)
 
 

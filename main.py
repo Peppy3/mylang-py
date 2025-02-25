@@ -50,7 +50,7 @@ def main() -> int:
     if not validation_error:
         print("Everything seems to be correct!")
     else:
-        print("Something went wrong validaing!")
+        print("Something went wrong when validaing!")
         return 1 
     return 0
 

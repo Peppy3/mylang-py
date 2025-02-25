@@ -110,6 +110,8 @@ class Token:
     pos: int
     length: int
 
+    __eq__ = lambda self, other: isinstance(other, TokenEnum) and self.type == other
+
     def precedence(self):
         if self.type == TokenEnum.BoolOr:
             return 1
@@ -142,7 +144,8 @@ class Token:
             TokenEnum.Asterisk,
             TokenEnum.Not,
             TokenEnum.BoolNot,
-            TokenEnum.Ampersand
+            TokenEnum.Ampersand,
+            TokenEnum.Period
             )
 
     def is_literal(self):

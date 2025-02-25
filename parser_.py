@@ -90,10 +90,10 @@ class Parser:
     def argument_expression_list(self):
         args = list()
 
-        while True:
+        while self.current != TokenEnum.RightParen and self.current != TokenEnum.Eof:
             args.append(self.expression())
 
-            if self.current.type == TokenEnum.RightParen:
+            if self.current != TokenEnum.Comma:
                 break
 
             self.expect(TokenEnum.Comma)

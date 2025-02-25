@@ -20,11 +20,32 @@ def validate_func(func):
     return func
 
 class Validator:
-    __slots__ = ("src",)
+    __slots__ = "src", "errors"
     def __init__(self, src):
         self.src = src
+        self.errors = 0
     
     validate = lambda self, ast: self.module(ast)
+
+    def _error(self, token, msg):
+        self.errors += 1
+
+        line_pos, col_pos = self.src.get_tok_human_pos(token)
+        line_str = self.src.get_line(token)
+        
+        print(f"{self.src.filename}: {line_pos}:{col_pos} {msg}")
+        if line_str is None:
+            print("EOF")
+            return
+
+        print(line_str)
+        for i in range(col_pos - 1):
+            if line_str[i] == '\t':
+                print("\t", end="")
+            else:
+                print(" ", end="")
+        print("^")
+        return True
 
     @validate_func
     def type_expr(self, node: ast.Node) -> bool:
@@ -40,10 +61,12 @@ class Validator:
             return self.type_expr(node.ret)
         elif node.isa(ast.UnaryExpr):
             if node.op != TokenEnum.Asterisk:
-                return True
+                return self._error(node.op, 
+                    f"Can not have unary {node.op.type.name} in type expression")
             return self.type_expr(node.expr)
+        elif node.isa(ast.PostfixExpr):
+            return self._error(node.op, f"Can not have postfix operation in type expression")
         elif node.isa(ast.BinaryExpr):
-            # FIXME: print an error
             return False
         else:
             raise NotImplementedError(node.__class__.__name__)
@@ -79,7 +102,12 @@ class Validator:
         
         if node.isa(ast.Declaration):
             return self.declaration(node)
-        pprint(node)
+        elif node.isa(ast.BinaryExpr):
+            return self.expression(node)
+        elif node.isa(ast.PostfixExpr):
+            return self.expression(node)
+        elif node.isa(ast.UnaryExpr):
+            return self.expression(node)
 
         raise NotImplementedError(node.__class__.__name__)
 
@@ -92,6 +120,7 @@ class Validator:
 
 def validate(src: ParserFile, ast: ast.Node):
     validator = Validator(src)
-    return validator.validate(ast)
+    validator.validate(ast)
+    return validator.errors
 
 

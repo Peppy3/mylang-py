@@ -1,6 +1,6 @@
 module main;
 
-foo: int; # This should fail
+foo: &i; # This should fail
 
 square: (x: int) -> int {
     return x * x;

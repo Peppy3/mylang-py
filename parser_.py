@@ -4,14 +4,20 @@ from lexer import Lexer
 
 import ast_ as ast
 
-PARSER_DEBUG: bool = False
+TABSPACE: int = 4
+
+PARSER_DEBUG: bool = True
+parser_debug_uid: int = 0
 
 def parser_func(func):
     if PARSER_DEBUG:
         def f(*args):
-            print(f"parser START: {func.__name__}")
+            global parser_debug_uid
+            uid = parser_debug_uid
+            parser_debug_uid += 1
+            print(f"parser START: {func.__name__}", uid)
             ret = func(*args)
-            print(f"parser END: {func.__name__}")
+            print(f"parser END: {func.__name__}", uid)
             return ret
         return f
     return func
@@ -30,6 +36,10 @@ class Parser:
     def _error(self, msg):
         self.errors += 1
 
+        if self.current == TokenEnum.Newline and len(self.src.get_line(self.current)) != 0:
+            # a bit of a hack
+            self.current = Token(TokenEnum.Newline, self.current.pos - 1, self.current.length)
+
         line_pos, col_pos = self.src.get_tok_human_pos(self.current)
         line_str = self.src.get_line(self.current)
         
@@ -38,13 +48,13 @@ class Parser:
             print("EOF")
             return
 
-        print(line_str)
+        print(line_str.expandtabs(4))
         for i in range(col_pos - 1):
             if line_str[i] == '\t':
-                print("\t", end="")
+                print(" ", end="")
             else:
                 print(" ", end="")
-        print("^")
+        print("^" if self.current != TokenEnum.Newline else " ^")
 
     def next(self):
         tok = self.current
@@ -52,9 +62,9 @@ class Parser:
         self.lookahead = self.lexer.next()
         return tok
 
-    def expect(self, typ):
-        if self.current.type != typ:
-            self._error(f"Expected {typ.name} but got {self.current.type.name}")
+    def expect(self, *types):
+        if self.current.type not in types:
+            self._error(f"Expected {' or '.join(typ.name for typ in types)} but got {self.current.type.name}")
             self.next()
             return None
         else:
@@ -160,7 +170,7 @@ class Parser:
     @parser_func
     def expression_statement(self):
         expr = self.expression()
-        self.expect(TokenEnum.Semicolon)
+        self.expect(TokenEnum.Newline, TokenEnum.Semicolon)
         return expr
 
     @parser_func
@@ -210,20 +220,25 @@ class Parser:
         elif self.current.type == TokenEnum.LeftCurly:
             decl.expr = self.compound_statement()
         else:
-            self.expect(TokenEnum.Semicolon)
+            self.expect(TokenEnum.Newline, TokenEnum.Semicolon)
 
         return decl
 
     @parser_func
     def return_statement(self):
         self.expect(TokenEnum.Return)
-        return ast.ReturnStmt(self.expression_statement())
+        expr = self.expression()
+        self.expect(TokenEnum.Newline, TokenEnum.Semicolon)
+        return ast.ReturnStmt(expr)
 
     @parser_func
     def statement(self):
         if self.current.type == TokenEnum.Identifier and self.lookahead.type == TokenEnum.Colon:
             return self.declaration_statement()
-        if self.current.type == TokenEnum.Return:
+        elif self.current == TokenEnum.Newline:
+            self.next()
+            return None
+        elif self.current.type == TokenEnum.Return:
             return self.return_statement()
         else:
             return self.expression_statement()
@@ -232,7 +247,9 @@ class Parser:
     def statement_list(self):
         statements = list()
         while self.current.type != TokenEnum.RightCurly and self.current.type != TokenEnum.Eof:
-            statements.append(self.statement())
+            stmt = self.statement()
+            if stmt is not None:
+                statements.append(stmt)
 
         return statements
 
@@ -255,7 +272,7 @@ class Parser:
         name = self.expect(TokenEnum.Identifier)
         if name is None: return None
 
-        semi = self.expect(TokenEnum.Semicolon)
+        semi = self.expect(TokenEnum.Newline, TokenEnum.Semicolon)
         if semi is None: return None
 
         statements = None

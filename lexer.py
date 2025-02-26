@@ -171,7 +171,9 @@ class Lexer:
                 return self._make_token(TokenEnum.Eof)
 
             ch = self.src.getc()
-
+            
+            if ch == '\n':
+                return self._make_token(TokenEnum.Newline)
             if ch.isspace():
                 continue
             if ch == '#':

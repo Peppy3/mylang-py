@@ -4,6 +4,7 @@ from dataclasses import dataclass
 class TokenEnum(IntEnum):
     Invalid = auto()
     Eof = auto()
+    Newline = auto()
 
     Equal = auto()              # ==
     NotEqual = auto()           # !=

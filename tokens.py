@@ -90,10 +90,6 @@ class TokenEnum(IntEnum):
     Import = auto()
     As = auto()
 
-    Struct = auto()
-    Union = auto()
-    Enum = auto()
-
     Null = auto()
     true = auto()
     false = auto()
@@ -105,13 +101,14 @@ class TokenEnum(IntEnum):
     CharLiteral = auto()
     StringLiteral = auto()
 
-@dataclass(slots=True, frozen=True, repr=True)
+@dataclass(slots=True, frozen=True)
 class Token:
     type: TokenEnum
     pos: int
     length: int
 
     __eq__ = lambda self, other: isinstance(other, TokenEnum) and self.type == other
+    __repr__ = lambda self: f"Token({self.type.name}, pos={self.pos}, len={self.length})"
 
     def precedence(self):
         if self.type == TokenEnum.BoolOr:
@@ -134,6 +131,8 @@ class Token:
             TokenEnum.ShiftLeft, TokenEnum.ShiftRight, TokenEnum.Ampersand
             ):
             return 5
+        elif self.type == TokenEnum.Period:
+            return 6
         else:
             return 0
     

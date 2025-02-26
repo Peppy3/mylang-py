@@ -48,7 +48,7 @@ class Parser:
             print("EOF")
             return
 
-        print(line_str.expandtabs(4))
+        print(line_str.expandtabs(TABSPACE))
         for i in range(col_pos - 1):
             if line_str[i] == '\t':
                 print(" ", end="")
@@ -129,11 +129,11 @@ class Parser:
 
     @parser_func
     def unary_expression(self):
-        if self.current.is_unary():
+        if not self.current.is_unary():
+            return self.postfix_expression()
+        else:
             op = self.next()
             return ast.UnaryExpr(op, self.unary_expression())
-        else:
-            return self.postfix_expression()
 
     @parser_func
     def binary_expression(self, lhs=None, min_precedence=0):
@@ -208,10 +208,14 @@ class Parser:
         else:
             type_expr = self.type_expression()
 
-        return ast.Declaration(name, type_expr, None)
+        return ast.Declaration(name, type_expr, None, pub, const, macro)
 
     @parser_func
     def declaration_statement(self):
+        pub = self.next() if self.current == TokenEnum.Pub else None
+        const = self.next() if self.current == TokenEnum.Const else None
+        macro = self.next() if self.current == TokenEnum.Macro else None
+        
         decl = self.declaration()
 
         if self.current.type == TokenEnum.Assignment:

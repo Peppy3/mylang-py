@@ -73,6 +73,7 @@ class BinaryExpr(Node):
         if self.lhs is not None: self.lhs.walk(visitor)
         if self.rhs is not None: self.rhs.walk(visitor)
 
+
 @dataclass(slots=True, repr=True)
 class FuncType(Node):
     args: list
@@ -98,6 +99,10 @@ class Declaration(Node):
     type_expr: Node
     expr: Node | None
 
+    pub: Token | None
+    const: Token | None
+    macro: Token | None
+
     @walk_func
     def walk(self, visitor):
         if self.type_expr is not None: self.type_expr.walk(visitor)
@@ -111,5 +116,3 @@ class Module(Node):
     @walk_func
     def walk(self, visitor):
         for stmt in self.statements: visitor.visit(self)
-
-

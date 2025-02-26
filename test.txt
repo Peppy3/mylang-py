@@ -1,14 +1,24 @@
 module main
 
-foo: &i # This should fail
+Vec3: struct {
+    x: f32
+    y: f32
+    z: f32
+
+    dot: (self: Vec3, other: Vec3) -> f32 {
+        # The .field notation is used for the member access of the first value
+        # (if it has any members that is)
+        return .x + other.x * .y + other.y * .z + other.y
+    }
+}
 
 square: (x: int) -> int {
     return x * x
 }
 
-main: (argc: int, argv: **u8) -> int {
+# main function
+pub main: (argc: int, argv: **u8) -> int {
     print("Hello World!\n")
     return 0
 }
-
 

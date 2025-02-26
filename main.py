@@ -11,23 +11,24 @@ from validator import validate
 PROGRAM_NAME = "mylang"
 PROGRAM_VERSION = "0.0.1-dev0"
 
+
 def parse_args():
     parser = argparse.ArgumentParser(prog=PROGRAM_NAME)
-    
-    parser.add_argument("-v", "--version", 
+
+    parser.add_argument("-v", "--version",
         action="version",
         version=f"{PROGRAM_NAME} {PROGRAM_VERSION}",
         help="prints the program version"
         )
 
-    parser.add_argument("input_file",
-        metavar="INPUT_FILE",
-        default=None
-    )
-
     parser.add_argument("-o",
         metavar="OUTPUT_FILE",
         default="out.s"
+        )
+
+    parser.add_argument("input_file",
+        metavar="INPUT_FILE",
+        default=None
         )
 
     return parser.parse_args()
@@ -43,7 +44,7 @@ def main() -> int:
         print(f"Got {num_errors} error(s)")
         return 1
     
-    pprint(ast)
+    pprint(ast, compact=True)
     print("=============================")
     print("validating ...")
     validation_error = validate(src, ast)
@@ -53,6 +54,7 @@ def main() -> int:
         print("Something went wrong when validaing!")
         return 1 
     return 0
+
 
 if __name__ == "__main__": 
     raise SystemExit(main())

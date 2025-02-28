@@ -1,4 +1,6 @@
+from tokens import Token, TokenEnum
 
+TABSPACE: int = "    "
 
 class ParserFile:
     __slots__ = "filename", "src", "pos"
@@ -19,6 +21,23 @@ class ParserFile:
 
     def peek(self):
         return self.src[self.pos]
+
+    def error(self, tok, msg, end_msg=None):
+        if tok == TokenEnum.Newline and len(self.get_line(tok)) != 0:
+            # a bit of a hack
+            tok = Token(TokenEnum.Newline, tok.pos - 1, tok.length)
+
+        line_pos, col_pos = self.get_tok_human_pos(tok)
+        line_str = self.get_line(tok)
+        
+        print(f"{self.filename}:{line_pos}:{col_pos}: ERROR: {msg}")
+        if line_str is None:
+            print("EOF")
+            return
+
+        print(line_str.expandtabs(len(TABSPACE)))
+        print("".join(TABSPACE if line_str[i] == '\t' else " " for i in range(col_pos - 1)) + '^' * tok.length)
+        if end_msg is not None: print(end_msg)
     
     def get_token_string(self, tok):
         if tok.pos == len(self.src):

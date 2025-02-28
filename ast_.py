@@ -20,11 +20,15 @@ def walk_list(l, visitor):
 class Node(ABC):
     @abstractmethod
     def walk(self, visitor):
-        raise NotImplementedError
+        pass
     
+    def __str__(self):
+        return f"ast.{self.__class__.__name__}"
+
     def isa(self, cls):
         return isinstance(self, cls)
-    
+
+
 @dataclass(slots=True, repr=True)
 class Literal(Node):
     token: Token
@@ -36,7 +40,7 @@ class Literal(Node):
 
 @dataclass(slots=True, repr=True)
 class CallExpr(Node):
-    func: Token
+    name: Token
     args: list
     
     @walk_func
@@ -97,11 +101,7 @@ class ReturnStmt(Node):
 class Declaration(Node):
     name: Token
     type_expr: Node
-    expr: Node | None
-
-    pub: Token | None
-    const: Token | None
-    macro: Token | None
+    expr: Node | None = None
 
     @walk_func
     def walk(self, visitor):

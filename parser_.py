@@ -4,9 +4,7 @@ from lexer import Lexer
 
 import ast_ as ast
 
-TABSPACE: int = 4
-
-PARSER_DEBUG: bool = True
+PARSER_DEBUG: bool = False
 parser_debug_uid: int = 0
 
 def parser_func(func):
@@ -35,26 +33,7 @@ class Parser:
 
     def _error(self, msg):
         self.errors += 1
-
-        if self.current == TokenEnum.Newline and len(self.src.get_line(self.current)) != 0:
-            # a bit of a hack
-            self.current = Token(TokenEnum.Newline, self.current.pos - 1, self.current.length)
-
-        line_pos, col_pos = self.src.get_tok_human_pos(self.current)
-        line_str = self.src.get_line(self.current)
-        
-        print(f"{self.src.filename}: {line_pos}:{col_pos} {msg}")
-        if line_str is None:
-            print("EOF")
-            return
-
-        print(line_str.expandtabs(TABSPACE))
-        for i in range(col_pos - 1):
-            if line_str[i] == '\t':
-                print(" ", end="")
-            else:
-                print(" ", end="")
-        print("^" if self.current != TokenEnum.Newline else " ^")
+        self.src.error(self.current, msg)
 
     def next(self):
         tok = self.current
@@ -149,10 +128,9 @@ class Parser:
             op = self.next()
             rhs = self.binary_expression(None, op_prec + 1)
             
-            tmp = ast.BinaryExpr(op, lhs, rhs)
-            lhs = tmp
+            lhs = ast.BinaryExpr(op, lhs, rhs)
 
-    type_expression = binary_expression
+    type_expression = lambda self: self.binary_expression()
     
     @parser_func
     def assignment_expression(self):
@@ -203,18 +181,18 @@ class Parser:
         self.expect(TokenEnum.Colon)
         
         type_expr = None
-        if self.current.type == TokenEnum.LeftParen:
+        if self.current == TokenEnum.LeftParen:
             type_expr = self.function_type()
         else:
             type_expr = self.type_expression()
 
-        return ast.Declaration(name, type_expr, None, pub, const, macro)
+        return ast.Declaration(name, type_expr)
 
     @parser_func
     def declaration_statement(self):
-        pub = self.next() if self.current == TokenEnum.Pub else None
-        const = self.next() if self.current == TokenEnum.Const else None
-        macro = self.next() if self.current == TokenEnum.Macro else None
+        #pub = self.next() if self.current == TokenEnum.Pub else None
+        #const = self.next() if self.current == TokenEnum.Const else None
+        #macro = self.next() if self.current == TokenEnum.Macro else None
         
         decl = self.declaration()
 

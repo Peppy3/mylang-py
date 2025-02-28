@@ -90,10 +90,6 @@ class TokenEnum(IntEnum):
     Import = auto()
     As = auto()
 
-    Null = auto()
-    true = auto()
-    false = auto()
-
     Identifier = auto()
     IntegerLiteral = auto()
     HexLiteral = auto()

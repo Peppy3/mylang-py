@@ -2,30 +2,27 @@ from parser_file import ParserFile
 from tokens import Token, TokenEnum
 
 _KEYWORDS: dict = {
-    "if":        TokenEnum.If,
+    "if":       TokenEnum.If,
     "else":     TokenEnum.Else,
-    "switch":     TokenEnum.Switch,
+    "switch":   TokenEnum.Switch,
     "case":     TokenEnum.Case,
-    "default":     TokenEnum.Default,
-    "while":     TokenEnum.While,
-    "for":         TokenEnum.For,
-    "continue":    TokenEnum.Continue,
-    "break":     TokenEnum.Break,
-    "const":     TokenEnum.Const,
-    "macro":     TokenEnum.Macro,
-    "extern":     TokenEnum.Extern,
-    "pub":         TokenEnum.Pub,
-    "inline":     TokenEnum.Inline,
-    "return":     TokenEnum.Return,
-    "null":     TokenEnum.Null,
-    "true":     TokenEnum.true,
-    "false":     TokenEnum.false,
-    "module":     TokenEnum.Module,
-    "import":     TokenEnum.Import,
-    "as":         TokenEnum.As,
-    "not":         TokenEnum.BoolNot,
-    "and":         TokenEnum.BoolAnd,
-    "or":         TokenEnum.BoolOr,
+    "default":  TokenEnum.Default,
+    "while":    TokenEnum.While,
+    "for":      TokenEnum.For,
+    "continue": TokenEnum.Continue,
+    "break":    TokenEnum.Break,
+    "const":    TokenEnum.Const,
+    "macro":    TokenEnum.Macro,
+    "extern":   TokenEnum.Extern,
+    "pub":      TokenEnum.Pub,
+    "inline":   TokenEnum.Inline,
+    "return":   TokenEnum.Return,
+    "module":   TokenEnum.Module,
+    "import":   TokenEnum.Import,
+    "as":       TokenEnum.As,
+    "not":      TokenEnum.BoolNot,
+    "and":      TokenEnum.BoolAnd,
+    "or":       TokenEnum.BoolOr,
 }
 
 # come on python, I want this function so badly
@@ -41,7 +38,6 @@ class Lexer:
         return Token(token_type, self.token_start, self.src.pos - self.token_start)
 
     def scan_escape(self):
-        # Only support single char escape right now (hex and such later)
         ch = self.src.getc()
         if ch in ('0', 'a', 'b', 'e', 'f', 'n', 'r', 't', 'v', '\\', '\'', '"'):
             return True
@@ -87,8 +83,13 @@ class Lexer:
             self.src.pos += 1
             ch = self.src.peek()
 
+    def scan_integer(self):
+        ch = self.src.peek()
+        while ch.isdecimal():
+            self.src.pos += 1
+            ch = self.src.peek()
+    
     def scan_number(self):
-        # TODO: hex
         ch = self.src.peek()
 
         if ch == 'x':
@@ -100,19 +101,18 @@ class Lexer:
                 self.src.pos += 1
             return self._make_token(TokenEnum.HexLiteral)
 
-        while ch.isdecimal():
-            self.src.pos += 1
-            ch = self.src.peek()
+        self.scan_identifier()
+        ch = self.src.peek()
         
         if ch == '.':
             self.src.pos += 1;
             ch = self.src.peek()
+
             if not ch.isdecimal():
                 return self._make_token(TokenEnum.Invalid)
 
-            while ch.isdecimal():
-                self.src.pos += 1
-                ch = self.src.peek()
+            self.scan_integer()
+            ch = self.src.peek()
 
             if ch != 'e':
                 return self._make_token(TokenEnum.FloatLiteral)
@@ -123,9 +123,7 @@ class Lexer:
             if not ch.isdecimal():
                 return self._make_token(TokenEnum.Invalid)
 
-            while ch.isdecimal():
-                self.src.pos += 1;
-                ch = self.src.peek()
+            self.scan_integer()
 
             return self._make_token(TokenEnum.FloatLiteral)
         else:

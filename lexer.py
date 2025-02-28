@@ -190,17 +190,6 @@ class Lexer:
                 s = self.src.src[self.token_start: self.src.pos]
                 return self._make_token(_KEYWORDS.get(s, TokenEnum.Identifier))
 
-            elif ch == ':':
-                return self._make_token(TokenEnum.Colon)
-            elif ch == ',':
-                return self._make_token(TokenEnum.Comma)
-            elif ch == ';':
-                return self._make_token(TokenEnum.Semicolon)
-            elif ch == '@':
-                return self._make_token(TokenEnum.Address)
-            elif ch == '=':
-                return self._make_token(TokenEnum.Assignment)
-
             elif ch == '(':
                 return self._make_token(TokenEnum.LeftParen)
             elif ch == ')':
@@ -303,10 +292,10 @@ class Lexer:
             # Equal
             elif ch == '=' and self.src.peek() == '=':
                 self.src.pos += 1
-                return self._make_token(TokenEnum.AssignPipe)
+                return self._make_token(TokenEnum.Equal)
             elif ch == '!' and self.src.peek() == '=':
                 self.src.pos += 1
-                return self._make_token(TokenEnum.AssignPipe)
+                return self._make_token(TokenEnum.NotEqual)
 
             # Left
             elif ch == '<' and self.src.peek() == '<':
@@ -335,6 +324,17 @@ class Lexer:
                 return self._make_token(TokenEnum.GreaterThanOrEqual)
             elif ch == '>':
                 return self._make_token(TokenEnum.GreaterThan)
+
+            elif ch == ':':
+                return self._make_token(TokenEnum.Colon)
+            elif ch == ',':
+                return self._make_token(TokenEnum.Comma)
+            elif ch == ';':
+                return self._make_token(TokenEnum.Semicolon)
+            elif ch == '@':
+                return self._make_token(TokenEnum.Address)
+            elif ch == '=':
+                return self._make_token(TokenEnum.Assignment)
 
             else:
                 return self._make_token(TokenEnum.Invalid)

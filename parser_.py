@@ -14,6 +14,7 @@ def parser_func(func):
             uid = parser_debug_uid
             parser_debug_uid += 1
             print(f"parser START: {func.__name__}", uid)
+            print(*args)
             ret = func(*args)
             print(f"parser END: {func.__name__}", uid)
             return ret
@@ -98,6 +99,14 @@ class Parser:
             return ast.PostfixExpr(self.next(), primary)
         elif self.current.type == TokenEnum.Decrement:
             return ast.PostfixExpr(self.next(), primary)
+        elif self.current == TokenEnum.Period:
+            op = self.next()
+            if self.current != TokenEnum.Identifier:
+                self._error(f"Expected identifier but got {self.current.type.name}")
+                return None
+            member = ast.Literal(self.next())
+            return ast.BinaryExpr(op, primary, member)
+
         elif self.current.type == TokenEnum.LeftParen:
             self.next()
             args = self.argument_expression_list()
@@ -115,20 +124,26 @@ class Parser:
             return ast.UnaryExpr(op, self.unary_expression())
 
     @parser_func
-    def binary_expression(self, lhs=None, min_precedence=0):
+    def binary_expression(self, lhs=None, min_precedence=1):
         if lhs is None:
             lhs = self.unary_expression()
+        
+        prec = self.current.precedence()
 
-        while True:
-            op_prec = self.current.precedence()
-
-            if op_prec < 1:
-                return lhs
-
+        while prec >= min_precedence:
             op = self.next()
-            rhs = self.binary_expression(None, op_prec + 1)
-            
+            rhs = self.unary_expression()
+
+            prec = self.current.precedence()
+
+            while prec > op.precedence():
+                op_prec = op.precedence()
+                rhs = self.binary_expression(rhs, op_prec + (prec > op_prec))
+                prec = self.current.precedence()
+
             lhs = ast.BinaryExpr(op, lhs, rhs)
+
+        return lhs
 
     type_expression = lambda self: self.binary_expression()
     

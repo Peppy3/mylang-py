@@ -1,24 +1,41 @@
 module main
 
+foo: int = 42 + 27 * 64
+
+Point2D: struct {
+    x: f32
+    y: f32
+}
+
+# Vec3 is a value with type struct which is defined to a block of code
 Vec3: struct {
     x: f32
     y: f32
     z: f32
 
-    dot: (self: Vec3, other: Vec3) -> f32 {
-        # The .field notation is used for the member access of the first value
-        # (if it has any members that is)
-        return .x + other.x * .y + other.y * .z + other.y
+    dot: (lhs: Vec3, rhs: Vec3) -> f32 {
+        return lhs.x + rhs.x * lhs.y + rhs.y * lhs.z + rhs.y
     }
 }
+
+/*
+# list is just a macro funciton which gives out a code block (struct is also just a code block)
+macro list: (T: type) -> struct {
+    return {
+        length: uint
+        capacity: uint
+        data: *T
+    }
+}
+*/
 
 square: (x: int) -> int {
     return x * x
 }
 
 # main function
-pub main: (argc: int, argv: **u8) -> int {
-    print("Hello World!\n")
+main: (argc: int, argv: **u8) -> int {
+    square(5)
     return 0
 }
 

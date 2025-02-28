@@ -55,7 +55,6 @@ class IrGenerator:
                 self.error(node.token, f"type {typename!r} is not found")
             
             if not isinstance(typ.type, (ir.StructType, ir.SliceType)):
-                print(typ.__class__.__name__)
                 self.error(node.token, f"type {typename!r} is not a type")
 
             return typ
@@ -93,7 +92,6 @@ class IrGenerator:
 
         if node.op == TokenEnum.Period:
             struct = self.blocks[-1].lookup(lhs)
-            print(lhs.type, rhs.type)
             
             if isinstance(struct.type, (ir.StructType, ir.SliceType)):
                 self.error(node.lhs.token, f"{lhs} is not a struct or a slice")
@@ -200,14 +198,13 @@ class IrGenerator:
         elif isinstance(node.expr, list):
             block = self.blocks[-1].block(typ, name)
             
-            self.blocks[-1].build_move(typ, val, block)
-
             self.blocks.append(block)
 
             for stmt in node.expr:
                 self.statement(stmt)
 
             block = self.blocks.pop()
+            self.blocks[-1].build_move(typ, val, block)
         else:
             expr = self.expression(node.expr)
             self.blocks[-1].build_move(typ, val, expr)

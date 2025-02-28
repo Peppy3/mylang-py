@@ -108,9 +108,9 @@ class Token:
 
     def precedence(self):
         if self.type == TokenEnum.BoolOr:
-            return 1
+            return 5
         elif self.type == TokenEnum.BoolAnd:
-            return 2
+            return 4
         elif self.type in (
             TokenEnum.Equal, TokenEnum.NotEqual, 
             TokenEnum.LessThan, TokenEnum.GreaterThan,
@@ -121,14 +121,12 @@ class Token:
             TokenEnum.Addition, TokenEnum.Subtraction,
             TokenEnum.Pipe, TokenEnum.Xor
             ):
-            return 4
+            return 2
         elif self.type in (
             TokenEnum.Asterisk, TokenEnum.Division, TokenEnum.Modulo,
             TokenEnum.ShiftLeft, TokenEnum.ShiftRight, TokenEnum.Ampersand
             ):
-            return 5
-        elif self.type == TokenEnum.Period:
-            return 6
+            return 1
         else:
             return 0
     

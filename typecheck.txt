@@ -1,0 +1,9 @@
+module testing
+
+works: i32 = 5
+fails: u32 = "hi"
+
+main: () -> i32 {
+    works2: int = 3
+    fails2: uint = "hello world"
+}

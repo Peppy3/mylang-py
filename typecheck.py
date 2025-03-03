@@ -1,6 +1,7 @@
-from tokens import TokenEnum
+from tokens import Token, TokenEnum
 import ast_ as ast
 from symbol_table import SymbolTable
+from collections import abc
 
 class Type:
     __slots__ = ("token",)
@@ -9,7 +10,10 @@ class Type:
 
     def __eq__(self, other):
         return isinstance(other, Type) and self.__class__ == other.__class__
-    
+ 
+    def isa(self, cls):
+        return isinstance(self, cls)
+
     __repr__ = lambda self: self.__class__.__name__
 
 
@@ -119,7 +123,6 @@ BUILTIN_TYPES: list = [
     ("uint", UintType(None)),
 ]
 
-
 class Typechecker:
     __slots__ = "symbol_stack", "src", "num_errors"
     def __init__(self, src):
@@ -152,7 +155,7 @@ class Typechecker:
             if typ is None:
                 self.error(node.token, f"Could not resolve type {name!r}")
                 return
-            return typ
+            return typ.val
         elif node.isa(ast.FuncType):
             ret_type = self.type_expression(node.ret)
             func_type = FuncType(ret_type, list())
@@ -162,6 +165,7 @@ class Typechecker:
                 arg_type = self.type_expression(arg.type_expr)
                 func_type.append_arg(name, arg_type)
 
+            return func_type
         elif node.isa(ast.UnaryExpr):
             if node.op == TokenEnum.Asterisk:
                 typ = self.type_expression(node.expr)
@@ -170,6 +174,7 @@ class Typechecker:
                 self.error(node.op, f"Unary {node.op.type.name} not allowed in type expressions")
         else:
             raise NotImplementedError(node)
+
 
     def expression(self, node):
         if node.isa(ast.BinaryExpr):
@@ -201,22 +206,41 @@ class Typechecker:
         elif node.isa(ast.Literal):
             if node.token == TokenEnum.IntegerLiteral:
                 return IntType(node.token)
+            elif node.token == TokenEnum.StringLiteral:
+                return SliceType(UintType(None, 8), node.token.length)
             else:
                 raise NotImplementedError(node.token)
         else:
             raise NotImplementedError(node)
 
+
+    def statement(self, node):
+        if node.isa(ast.Declaration):
+            name = self.src.get_token_string(node.name)
+            typ = self.type_expression(node.type_expr)
+            
+            if node.expr is None:
+                return
+
+            if isinstance(node.expr, abc.Sequence):
+                for expr in node.expr:
+                    self.statement(expr)
+                return
+
+            typ = self.type_expression(node.type_expr)
+            val = self.statement(node.expr)
+            if (typ.isa(IntType) or typ.isa(UintType)) and (val.isa(IntType) or val.isa(UintType)):
+                return
+
+            self.error(node.expr.token, f"value does not have same type as declared variable")
+        else:
+            return self.expression(node)
+
+
     def module(self, node):
         for stmt in node.statements:
             if stmt.isa(ast.Declaration):
-                name = self.src.get_token_string(stmt.name)
-                typ = self.type_expression(stmt.type_expr)
-                
-                if stmt.expr is None:
-                    continue
-
-                self.expression(stmt.expr)
-
+                self.statement(stmt)
             elif stmt.isa(ast.BinaryExpr):
                 self.error(stmt.op, "Module scope can only have declarations")
             else:

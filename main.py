@@ -5,6 +5,7 @@ from parser_file import ParserFile
 from lexer import Lexer
 from parser_ import parse
 import ast_ as ast
+from typecheck import Typechecker
 
 from ir import generator
 
@@ -51,17 +52,20 @@ def main() -> int:
     
     if args.dump == "ast":
         pprint(ast)
-        return 0
+        # return 0
 
-    print("=============================")
-    print("generating IR ...")
-    
-    num_errors, rep = generator.generate(src, ast)
-    if num_errors:
-        print(f"Got {num_errors} error(s) when generating IR")
-        return 1 
+    # print("=============================")
+    # print("generating IR ...")
+    #
+    # num_errors, rep = generator.generate(src, ast)
+    # if num_errors:
+    #     print(f"Got {num_errors} error(s) when generating IR")
+    #     return 1 
 
-    print("Passed IR generation")
+    # print("Passed IR generation")
+
+    typechecker = Typechecker(src)
+    typechecker.typecheck(ast)
 
     return 0
 

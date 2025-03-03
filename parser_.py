@@ -53,7 +53,7 @@ class Parser:
     @parser_func
     def primary_expr(self):
         if self.current.type == TokenEnum.Identifier:
-            return ast.Literal(self.next())
+            return ast.Identifier(self.next())
         if self.current.type == TokenEnum.IntegerLiteral:
             return ast.Literal(self.next())
         elif self.current.type == TokenEnum.IntegerLiteral:

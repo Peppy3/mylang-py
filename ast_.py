@@ -30,13 +30,20 @@ class Node(ABC):
 
 
 @dataclass(slots=True, repr=True)
-class Literal(Node):
+class Identifier(Node):
     token: Token
 
     @walk_func
     def walk(self, visitor):
         pass
 
+@dataclass(slots=True, repr=True)
+class Literal(Node):
+    token: Token
+
+    @walk_func
+    def walk(self, visitor):
+        pass
 
 @dataclass(slots=True, repr=True)
 class CallExpr(Node):

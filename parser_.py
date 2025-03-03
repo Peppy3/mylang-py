@@ -98,10 +98,10 @@ class Parser:
             return ast.BinaryExpr(op, primary, member)
 
         elif self.current.type == TokenEnum.LeftParen:
-            self.next()
+            lp = self.next()
             args = self.argument_expression_list()
-            self.expect(TokenEnum.RightParen)
-            return ast.CallExpr(primary, args)
+            rp = self.expect(TokenEnum.RightParen)
+            return ast.CallExpr(primary, lp, args, rp)
         else:
             return primary
 
@@ -159,12 +159,12 @@ class Parser:
     @parser_func
     def function_type(self):
         # (x: int, y:int) ->int
-        self.expect(TokenEnum.LeftParen)
+        lp = self.expect(TokenEnum.LeftParen)
         args = self.declaration_list()
-        self.expect(TokenEnum.RightParen)
-        self.expect(TokenEnum.Arrow)
+        rp = self.expect(TokenEnum.RightParen)
+        arrow = self.expect(TokenEnum.Arrow)
         ret = self.type_expression()
-        return ast.FuncType(args, ret)
+        return ast.FuncType(lp, args, rp, arrow, ret)
         
     @parser_func
     def declaration_list(self):
@@ -213,10 +213,10 @@ class Parser:
 
     @parser_func
     def return_statement(self):
-        self.expect(TokenEnum.Return)
+        ret = self.expect(TokenEnum.Return)
         expr = self.expression()
         self.expect(TokenEnum.Newline, TokenEnum.Semicolon)
-        return ast.ReturnStmt(expr)
+        return ast.ReturnStmt(ret, expr)
 
     @parser_func
     def statement(self):
@@ -242,10 +242,10 @@ class Parser:
 
     @parser_func
     def code_block(self):
-        self.expect(TokenEnum.LeftCurly)
+        lc = self.expect(TokenEnum.LeftCurly)
         statements = self.statement_list()
-        self.expect(TokenEnum.RightCurly)
-        return ast.CodeBlock(statements)
+        rc = self.expect(TokenEnum.RightCurly)
+        return ast.CodeBlock(lc, statements, rc)
 
     @parser_func
     def module(self):
@@ -274,5 +274,5 @@ def parse(filename, src):
     parser = Parser(filename, src)
     ast = parser.module()
 
-    return parser.errors, ast
+    return ast, parser.errors
 

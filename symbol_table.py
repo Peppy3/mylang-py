@@ -14,16 +14,16 @@ class SymbolTable:
         if start_list is None:
             self.symbols = dict()
             return
-        self.symbols = {name: Symbol(name, val) for name, val in start_list}
+        self.symbols = {name: val for name, val in start_list}
     
     __str__ = lambda self: '\n'.join(str(symbol) for symbol in self.symbols.values())
     __contains__ = lambda self, lhs: lhs in self.symbols
     __iter__ = lambda self: (symbol for symbol in self.symbols.values())
     
     def insert(self, name, val):
-        if val in self.symbols:
+        if name in self.symbols:
             raise KeyError(f"{val.name} is already in symbol table")
-        self.symbols[name] = Symbol(name, val)
+        self.symbols[name] = val
         return val
 
     def get(self, name):

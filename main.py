@@ -44,7 +44,7 @@ def main() -> int:
     args = parse_args()
 
     src = ParserFile(args.input_file)
-    num_errors, ast = parse(args.input_file, src)
+    ast, num_errors = parse(args.input_file, src)
 
     if num_errors:
         print(f"Got {num_errors} error(s)")
@@ -53,6 +53,10 @@ def main() -> int:
     if args.dump == "ast":
         pprint(ast)
         # return 0
+
+
+    typechecker = Typechecker(src)
+    typechecker.typecheck(ast)
 
     # print("=============================")
     # print("generating IR ...")
@@ -63,9 +67,6 @@ def main() -> int:
     #     return 1 
 
     # print("Passed IR generation")
-
-    typechecker = Typechecker(src)
-    typechecker.typecheck(ast)
 
     return 0
 

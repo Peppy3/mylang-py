@@ -42,24 +42,30 @@ class StructType(Type):
 
 class IntType(Type):
     __slots__ = ("bit_length",)
-    def __init__(self, token, bit_length=64):
+    def __init__(self, token, bit_length: int | None = None):
         super().__init__(token)
         self.bit_length = bit_length
     
-    __str__ = lambda self: f"i{self.bit_length}"
+    def __str__(self):
+        return "int" if self.bit_length is None else f"i{self.bit_length}"
 
     def __eq__(self, other):
+        if self.bit_length is None:
+            return True
         return isinstance(other, IntType) and self.bit_length == other.bit_length
 
 class UintType(Type):
     __slots__ = ("bit_length",)
-    def __init__(self, token, bit_length=64):
+    def __init__(self, token, bit_length: int | None = None):
         super().__init__(token)
         self.bit_length = bit_length
     
-    __str__ = lambda self: f"u{self.bit_length}"
+    def __str__(self):
+        return "uint" if self.bit_length is None else f"u{self.bit_length}"
 
     def __eq__(self, other):
+        if self.bit_length is None:
+            return True
         return isinstance(other, UintType) and self.bit_length == other.bit_length
 
 class FloatType(Type):
@@ -71,6 +77,8 @@ class FloatType(Type):
     __str__ = lambda self: f"f{self.bit_length}"
 
     def __eq__(self, other):
+        if self.bit_length is None:
+            return True
         return isinstance(other, FloatType) and self.bit_length == other.bit_length
 
 class FuncType(Type):
@@ -102,7 +110,8 @@ class FuncType(Type):
 
 class SliceType(Type):
     __slots__ = "len", "type"
-    def __init__(self, typ, length):
+    def __init__(self, token, typ, length):
+        super().__init__(token)
         self.type = typ
         self.len = length
 
@@ -128,9 +137,10 @@ BUILTIN_TYPES: list = [
 ]
 
 class Typechecker:
-    __slots__ = "symbol_stack", "src", "num_errors"
+    __slots__ = "symbol_stack", "func_stack", "src", "num_errors"
     def __init__(self, src):
         self.symbol_stack = [SymbolTable(BUILTIN_TYPES)]
+        self.func_stack = [] # only used for return statements
         self.src = src
         self.num_errors = 0
 
@@ -154,12 +164,12 @@ class Typechecker:
     def type_expression(self, node):
         if node.isa(ast.Identifier):
             name = self.src.get_token_string(node.token)
-            
             typ = self.lookup(name)
+
             if typ is None:
                 self.error(node.token, f"Could not resolve type {name!r}")
-                return
-            return typ.val
+                return None
+            return typ
         elif node.isa(ast.FuncType):
             ret_type = self.type_expression(node.ret)
             func_type = FuncType(ret_type, list())
@@ -181,7 +191,45 @@ class Typechecker:
 
 
     def expression(self, node):
-        if node.isa(ast.BinaryExpr):
+        if node.isa(ast.Identifier):
+            name = self.src.get_token_string(node.token)
+            val = self.lookup(name)
+
+            if val is None:
+                self.error(node.token, f"Could not reslolve value {name!r}")
+
+            return val
+
+        elif node.isa(ast.CallExpr):
+            val = self.expression(node.func)
+
+            if val is None:
+                return None
+
+            if not val.isa(FuncType):
+                self.error(node.func, f"{name!r} is not a function")
+                return None
+            
+            func_arg_len = len(val.args)
+            call_arg_len = len(node.args)
+            if func_arg_len != call_arg_len:
+                self.error(node.func,
+                    f"Expected {func_arg_len} arguments to function but got {call_arg_len}")
+                return None
+            
+            for call_arg, func_arg in zip(node.args, val.args):
+                expr = self.expression(call_arg)
+                if expr is None: 
+                    continue
+                
+                if expr != func_arg[1]:
+                    self.error(call_arg, 
+                        "Function argument type does not match the definition. "
+                        f"Expected {func_arg[1]}")
+
+            return val.ret
+
+        elif node.isa(ast.BinaryExpr):
             lhs = self.expression(node.lhs)
             rhs = self.expression(node.rhs)
 
@@ -211,7 +259,9 @@ class Typechecker:
             if node.token == TokenEnum.IntegerLiteral:
                 return IntType(node.token)
             elif node.token == TokenEnum.StringLiteral:
-                return SliceType(UintType(None, 8), node.token.length)
+                return SliceType(node.token, UintType(node.token, 8), node.token.length)
+            elif node.token == TokenEnum.FloatLiteral:
+                return FloatType(node.token)
             else:
                 raise NotImplementedError(node.token)
         else:
@@ -223,22 +273,48 @@ class Typechecker:
             name = self.src.get_token_string(node.name)
             typ = self.type_expression(node.type_expr)
 
-            if node.expr is None:
+            self.insert(name, typ)
+
+            if node.expr is None or typ is None:
                 return
 
-            if node.expr.isa(ast.CodeBlock):
+            if typ.isa(FuncType):
+                if not node.expr.isa(ast.CodeBlock):
+                    self.error(node.name, "Function should be initialised to a code block")
+                    return
+
                 self.symbol_stack.append(SymbolTable())
+                self.func_stack.append(typ)
+
+                for arg in typ.args: # Tuple[name, Type]
+                    self.insert(*arg)
+
                 for expr in node.expr.statements:
                     self.statement(expr)
+
+                self.func_stack.pop()
                 self.symbol_stack.pop()
                 return
+            
+            #if node.expr.isa(ast.CodeBlock):
+            #    self.symbol_stack.append(SymbolTable())
+            #    for expr in node.expr.statements:
+            #        self.statement(expr)
+            #    self.symbol_stack.pop()
+            #    return
 
-            typ = self.type_expression(node.type_expr)
             val = self.statement(node.expr)
             if (typ.isa(IntType) or typ.isa(UintType)) and (val.isa(IntType) or val.isa(UintType)):
                 return
 
             self.error(node.expr.token, f"value does not have same type as declared variable")
+        elif node.isa(ast.ReturnStmt):
+            expr = self.expression(node.expr)
+            
+            if expr != self.func_stack[-1].ret:
+                self.error(node.return_token,
+                    "Value does not have the same type as function return value")
+                return
         else:
             return self.expression(node)
 

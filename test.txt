@@ -20,7 +20,7 @@ Vec3: struct {
 
 /*
 # list is just a macro funciton which gives out a code block (struct is also just a code block)
-macro list: (T: type) -> struct {
+$list: (T: type) -> struct {
     return {
         length: uint
         capacity: uint
@@ -35,7 +35,7 @@ square: (x: int) -> int {
 
 # main function
 main: (argc: int, argv: **u8) -> int {
-    square(5)
+    square(3)
     return 0
 }
 

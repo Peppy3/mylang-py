@@ -19,15 +19,20 @@ syn keyword mylangType int uint bool type
 
 syn keyword mylangConstant null true false
 
-syn region mylangString start=/\"/ end=/\"/
+syn match mylangSpecial display contained "\\\%(x\x\+\|.\|$\)"
+syn region mylangString start=/\"/ end=/\"/ skip=/\\\\\|\\/ contains=mylangSpecial excludenl extend
+syn region mylangChar start=/'/ end=/'/ skip=/\\\\\|\\/ contains=mylangSpecial excludenl extend
 
 hi def link mylangTodo Todo
 hi def link mylangComment Comment
+
 hi def link mylangStatement Statement
 hi def link mylangImport Include
 hi def link mylangStructure Structure
 hi def link mylangType Type
 hi def link mylangConstant Constant
-hi def link mylangString String
 
+hi def link mylangSpecial SpecialChar
+hi def link mylangString String
+hi def link mylangChar Character
 

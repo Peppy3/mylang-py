@@ -100,11 +100,17 @@ class TokenEnum(IntEnum):
 @dataclass(slots=True, frozen=True)
 class Token:
     type: TokenEnum
-    pos: int
+    position: int
     length: int
 
     __eq__ = lambda self, other: isinstance(other, TokenEnum) and self.type == other
-    __repr__ = lambda self: f"Token({self.type.name}, pos={self.pos}, len={self.length})"
+    __repr__ = lambda self: f"Token({self.type.name}, pos={self.position}, len={self.length})"
+
+    def pos(self):
+        return self.position
+
+    def end(self):
+        return self.position + self.length
 
     def precedence(self):
         if self.type == TokenEnum.BoolOr:

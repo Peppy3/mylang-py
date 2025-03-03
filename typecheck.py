@@ -121,6 +121,10 @@ BUILTIN_TYPES: list = [
     ("u32", UintType(None, 32)),
     ("u64", UintType(None, 64)),
     ("uint", UintType(None)),
+
+    ("f16", FloatType(None, 16)),
+    ("f32", FloatType(None, 32)),
+    ("f64", FloatType(None, 64)),
 ]
 
 class Typechecker:
@@ -218,13 +222,15 @@ class Typechecker:
         if node.isa(ast.Declaration):
             name = self.src.get_token_string(node.name)
             typ = self.type_expression(node.type_expr)
-            
+
             if node.expr is None:
                 return
 
-            if isinstance(node.expr, abc.Sequence):
-                for expr in node.expr:
+            if node.expr.isa(ast.CodeBlock):
+                self.symbol_stack.append(SymbolTable())
+                for expr in node.expr.statements:
                     self.statement(expr)
+                self.symbol_stack.pop()
                 return
 
             typ = self.type_expression(node.type_expr)

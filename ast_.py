@@ -116,6 +116,14 @@ class Declaration(Node):
         if self.expr is not None: self.expr.walk(visitor)
 
 @dataclass(slots=True, repr=True)
+class CodeBlock(Node):
+    statements: list
+    
+    @walk_func
+    def walk(self, visitor):
+        for stmt in self.statements: visitor.visit(self)
+
+@dataclass(slots=True, repr=True)
 class Module(Node):
     name: Token 
     statements: list
@@ -123,3 +131,4 @@ class Module(Node):
     @walk_func
     def walk(self, visitor):
         for stmt in self.statements: visitor.visit(self)
+

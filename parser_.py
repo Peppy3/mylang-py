@@ -54,17 +54,7 @@ class Parser:
     def primary_expr(self):
         if self.current.type == TokenEnum.Identifier:
             return ast.Identifier(self.next())
-        if self.current.type == TokenEnum.IntegerLiteral:
-            return ast.Literal(self.next())
-        elif self.current.type == TokenEnum.IntegerLiteral:
-            return ast.Literal(self.next())
-        elif self.current.type == TokenEnum.HexLiteral:
-            return ast.Literal(self.next())
-        elif self.current.type == TokenEnum.FloatLiteral:
-            return ast.Literal(self.next())
-        elif self.current.type == TokenEnum.CharLiteral:
-            return ast.Literal(self.next())
-        elif self.current.type == TokenEnum.StringLiteral:
+        elif self.current.is_literal():
             return ast.Literal(self.next())
         elif self.current.type == TokenEnum.LeftParen:
             self.expect(TokenEnum.LeftParen)
@@ -215,7 +205,7 @@ class Parser:
             self.next()
             decl.expr = self.expression_statement()
         elif self.current.type == TokenEnum.LeftCurly:
-            decl.expr = self.compound_statement()
+            decl.expr = self.code_block()
         else:
             self.expect(TokenEnum.Newline, TokenEnum.Semicolon)
 
@@ -251,11 +241,11 @@ class Parser:
         return statements
 
     @parser_func
-    def compound_statement(self):
+    def code_block(self):
         self.expect(TokenEnum.LeftCurly)
         statements = self.statement_list()
         self.expect(TokenEnum.RightCurly)
-        return statements
+        return ast.CodeBlock(statements)
 
     @parser_func
     def module(self):

@@ -4,10 +4,6 @@ from symbol_table import SymbolTable
 from collections import abc
 
 class Type:
-    __slots__ = ("token",)
-    def __init__(self, token):
-        self.token = token
-
     def __eq__(self, other):
         return isinstance(other, Type) and self.__class__ == other.__class__
  
@@ -19,9 +15,9 @@ class Type:
 
 class PointerType(Type):
     __slots__ = ("to",)
-    def __init__(self, token, to):
-        super().__init__(token)
+    def __init__(self, to):
         self.to = to
+
     __str__ = lambda self: f"*{str(self.to)}"
     __eq__ = lambda self, other: isinstance(other, Pointer) and self.to == other.to
 
@@ -42,8 +38,7 @@ class StructType(Type):
 
 class IntType(Type):
     __slots__ = ("bit_length",)
-    def __init__(self, token, bit_length: int | None = None):
-        super().__init__(token)
+    def __init__(self, bit_length: int | None = None):
         self.bit_length = bit_length
     
     def __str__(self):
@@ -56,8 +51,7 @@ class IntType(Type):
 
 class UintType(Type):
     __slots__ = ("bit_length",)
-    def __init__(self, token, bit_length: int | None = None):
-        super().__init__(token)
+    def __init__(self, bit_length: int | None = None):
         self.bit_length = bit_length
     
     def __str__(self):
@@ -70,8 +64,7 @@ class UintType(Type):
 
 class FloatType(Type):
     __slots__ = ("bit_length",)
-    def __init__(self, token, bit_length=64):
-        super().__init__(token)
+    def __init__(self, bit_length=64):
         self.bit_length = bit_length
     
     __str__ = lambda self: f"f{self.bit_length}"
@@ -110,8 +103,7 @@ class FuncType(Type):
 
 class SliceType(Type):
     __slots__ = "len", "type"
-    def __init__(self, token, typ, length):
-        super().__init__(token)
+    def __init__(self, typ, length):
         self.type = typ
         self.len = length
 
@@ -119,21 +111,21 @@ class SliceType(Type):
 
 
 BUILTIN_TYPES: list = [
-    ("i8", IntType(None, 8)),
-    ("i16", IntType(None, 16)),
-    ("i32", IntType(None, 32)),
-    ("i64", IntType(None, 64)),
+    ("i8", IntType(8)),
+    ("i16", IntType(16)),
+    ("i32", IntType(32)),
+    ("i64", IntType(64)),
     ("int", IntType(None)),
 
-    ("u8", UintType(None, 8)),
-    ("u16", UintType(None, 16)),
-    ("u32", UintType(None, 32)),
-    ("u64", UintType(None, 64)),
+    ("u8", UintType(8)),
+    ("u16", UintType(16)),
+    ("u32", UintType(32)),
+    ("u64", UintType(64)),
     ("uint", UintType(None)),
 
-    ("f16", FloatType(None, 16)),
-    ("f32", FloatType(None, 32)),
-    ("f64", FloatType(None, 64)),
+    ("f16", FloatType(16)),
+    ("f32", FloatType(32)),
+    ("f64", FloatType(64)),
 ]
 
 class Typechecker:
@@ -183,7 +175,7 @@ class Typechecker:
         elif node.isa(ast.UnaryExpr):
             if node.op == TokenEnum.Asterisk:
                 typ = self.type_expression(node.expr)
-                return PointerType(node.op, typ)
+                return PointerType(typ)
             else:
                 self.error(node.op, f"Unary {node.op.type.name} not allowed in type expressions")
         else:
@@ -257,11 +249,11 @@ class Typechecker:
                 raise NotImplementedError(node.op)
         elif node.isa(ast.Literal):
             if node.token == TokenEnum.IntegerLiteral:
-                return IntType(node.token)
+                return IntType(None)
             elif node.token == TokenEnum.StringLiteral:
-                return SliceType(node.token, UintType(node.token, 8), node.token.length)
+                return SliceType(UintType(node.token, 8), node.token.length)
             elif node.token == TokenEnum.FloatLiteral:
-                return FloatType(node.token)
+                return FloatType(None)
             else:
                 raise NotImplementedError(node.token)
         else:
@@ -332,6 +324,11 @@ class Typechecker:
     def typecheck(self, ast):
         
         self.module(ast)
+
+        # == 1 because of builtins is in its own table
+        assert len(self.symbol_stack) == 1, "Something left on the stack"
+
+        assert len(self.func_stack) == 0
 
         return self.num_errors
 

@@ -35,7 +35,7 @@ square: (x: int) -> int {
 
 # main function
 main: (argc: int, argv: **u8) -> int {
-    square(3)
+    square(5)
     return 0
 }
 

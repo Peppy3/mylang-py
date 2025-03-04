@@ -120,10 +120,20 @@ class FuncType(Type):
 
 
 class SliceType(Type):
-    __slots__ = "len", "type"
-    def __init__(self, typ, length):
+    __slots__ = "length", "type"
+    def __init__(self, typ, length=None):
         self.type = typ
-        self.len = length
+        self.length = length
+
+    def __eq__(self, other):
+        if not isinstance(other, SliceType):
+            return False
+
+        if self.len is None:
+            return True
+        
+        # allow to create and convert to a bigger slice but not the other way around
+        return self.len >= other.len
 
     __str__ = lambda self: f"{str(self.type)}[{self.len}]"
 
@@ -172,7 +182,7 @@ class Typechecker:
 
     def insert(self, name, val):
         self.symbol_stack[-1].insert(name, val)
-
+    
 
     def type_expression(self, node, is_ptr=False):
         if node.isa(ast.Identifier):
@@ -211,6 +221,13 @@ class Typechecker:
                 return PointerType(typ)
             else:
                 self.error(node.op, f"Unary {node.op.type.name} not allowed in type expressions")
+        elif node.isa(ast.Slice):
+            member_typ = self.type_expression(node.expr)
+
+            if node.subscript is None:
+                return SliceType(member_typ)
+            else:
+                raise NotImplementedError("sized and raw slice types")
         else:
             raise NotImplementedError(node)
 
@@ -224,6 +241,16 @@ class Typechecker:
                 self.error(node.token, f"Could not reslolve value {name!r}")
 
             return val
+
+        elif node.isa(ast.Slice):
+            val = self.expression(node.expr)
+            
+            subscript = self.expression(node.subscript)
+
+            if not (subscript.isa(UintType) or subscript.isa(IntType)):
+                self.error(node.subscript, "value must get evaluated to an integer type")
+
+            return val.type
 
         elif node.isa(ast.CallExpr):
             val = self.expression(node.func)
@@ -336,11 +363,24 @@ class Typechecker:
                 self.symbol_stack.pop()
                 return
             
-            val = self.expression(node.expr)
-            if (typ.isa(IntType) or typ.isa(UintType)) and (val.isa(IntType) or val.isa(UintType)):
+            # might not have an assignment
+            if node.expr is None:
                 return
 
-            self.error(node.expr.token, f"value does not have same type as declared variable")
+            val = self.expression(node.expr)
+            if val is None:
+                return
+            elif (typ.isa(IntType) or typ.isa(UintType)) and (val.isa(IntType) or val.isa(UintType)):
+                return
+            elif typ.isa(SliceType) and val.isa(SliceType):
+                # allow for slice type lengths that are greater or equal than the actual value
+                if typ.length is not None and typ.length < val.length:
+                    self.error(node.expr, f"Slice must be a length of {typ.length} or greater")
+                else:
+                    typ = val
+                return
+            else:
+                self.error(node.expr, "value does not have same type as declared variable")
         elif node.isa(ast.ReturnStmt):
             expr = self.expression(node.expr)
 

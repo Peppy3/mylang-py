@@ -140,6 +140,23 @@ class FuncType(Node):
 
     def end(self): return self.ret.end()
 
+
+@dataclass(slots=True, repr=True)
+class Slice(Node):
+    expr: Node
+    left_square: Token
+    subscript: Node | None
+    right_square: Token
+
+    @walk_func
+    def walk(self, visitor):
+        if self.slice_expr is not None: self.slice_expr.walk(visitor)
+        if self.subscript is not None: self.subscript.walk(visitor)
+
+    def pos(self): return self.slice_expr.pos()
+
+    def end(self): return self.right_square.position + 1
+
 @dataclass(slots=True, repr=True)
 class ReturnStmt(Node):
     ret: Token

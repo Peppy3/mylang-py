@@ -2,6 +2,8 @@ module main
 
 foo: int = 42 + 27 * 64
 
+hello: u8[] = "hello world"
+
 struct List {
     val: int
     next: *List 
@@ -19,7 +21,7 @@ struct Vec3 {
 }
 
 /*
-# list is just a macro funciton which gives out a code block (struct is also just a code block)
+# list is just a macro funciton which gives out a struct
 $List: (T: type) -> type {
     return struct {
         length: uint
@@ -35,6 +37,8 @@ square: (x: int) -> int {
 
 # main function
 main: (argc: int, argv: **u8) -> int {
+    hello: u8[] = "Hello World!\n"
+    w: u8 = hello[7]
     square(5)
     return 0
 }

@@ -109,6 +109,13 @@ class Parser:
             args = self.argument_expression_list()
             rp = self.expect(TokenEnum.RightParen)
             return ast.CallExpr(primary, lp, args, rp)
+        elif self.current == TokenEnum.LeftSquare:
+            ls = self.next()
+            subscript = None
+            if self.current != TokenEnum.RightSquare:
+                subscript = self.assignment_expression()
+            rs = self.expect(TokenEnum.RightSquare)
+            return ast.Slice(primary, ls, subscript, rs)
         else:
             return primary
 

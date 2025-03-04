@@ -34,6 +34,24 @@ class VoidType(Type):
     __str__ = lambda self: "void"
 
 class StructType(Type):
+    __slots__ = "name", "symbols"
+    def __init__(self, name: str, symbols: SymbolTable):
+        self.name = name
+        self.symbols = symbols
+
+    def __eq__(self, other):
+        if not isinstance(other, StructType):
+            return False
+
+        for s1, s2 in zip(self.symbols.values(), other.symbols.values()):
+            if s1 != s2:
+                return False
+
+        return True
+
+    def lookup(self, name: str):
+        return self.symbols.get(name)
+
     __str__ = lambda self: "struct"
 
 class IntType(Type):
@@ -128,11 +146,12 @@ BUILTIN_TYPES: list = [
     ("f64", FloatType(64)),
 ]
 
+
 class Typechecker:
-    __slots__ = "symbol_stack", "func_stack", "src", "num_errors"
+    __slots__ = "symbol_stack", "block_stack", "src", "num_errors"
     def __init__(self, src):
         self.symbol_stack = [SymbolTable(BUILTIN_TYPES)]
-        self.func_stack = [] # only used for return statements
+        self.block_stack = []
         self.src = src
         self.num_errors = 0
 
@@ -144,8 +163,10 @@ class Typechecker:
 
     def lookup(self, name):
         for table in reversed(self.symbol_stack):
-            if (symbol := table.get(name)) is not None:
+            symbol = table.get(name)
+            if symbol[1] is not None:
                 return symbol
+
         return None
 
 
@@ -153,10 +174,17 @@ class Typechecker:
         self.symbol_stack[-1].insert(name, val)
 
 
-    def type_expression(self, node):
+    def type_expression(self, node, is_ptr=False):
         if node.isa(ast.Identifier):
             name = self.src.get_token_string(node.token)
-            typ = self.lookup(name)
+            
+            _, typ = self.lookup(name)
+            
+            if (not is_ptr) and typ.isa(StructType) and len(self.block_stack):
+                stack_top = self.block_stack[-1]
+                if stack_top.isa(StructType) and name == stack_top.name:
+                    self.error(node.token, f"{name!r} is can not be a recursive datastructure")
+                    return None
 
             if typ is None:
                 self.error(node.token, f"Could not resolve type {name!r}")
@@ -165,16 +193,21 @@ class Typechecker:
         elif node.isa(ast.FuncType):
             ret_type = self.type_expression(node.ret)
             func_type = FuncType(ret_type, list())
+
+            self.block_stack.append(func_type)
             
             for arg in node.args:
                 name = self.src.get_token_string(arg.name)
                 arg_type = self.type_expression(arg.type_expr)
                 func_type.append_arg(name, arg_type)
 
+            self.block_stack.pop()
+
             return func_type
+
         elif node.isa(ast.UnaryExpr):
             if node.op == TokenEnum.Asterisk:
-                typ = self.type_expression(node.expr)
+                typ = self.type_expression(node.expr, is_ptr=True)
                 return PointerType(typ)
             else:
                 self.error(node.op, f"Unary {node.op.type.name} not allowed in type expressions")
@@ -185,7 +218,7 @@ class Typechecker:
     def expression(self, node):
         if node.isa(ast.Identifier):
             name = self.src.get_token_string(node.token)
-            val = self.lookup(name)
+            _, val = self.lookup(name)
 
             if val is None:
                 self.error(node.token, f"Could not reslolve value {name!r}")
@@ -222,18 +255,33 @@ class Typechecker:
             return val.ret
 
         elif node.isa(ast.BinaryExpr):
+
+            if node.op == TokenEnum.Period:
+                lhs = self.expression(node.lhs)
+
+                if not lhs.isa(StructType):
+                    self.error(node.op, "Can only do member access on struct types")
+
+                member_name = self.src.get_token_string(node.rhs)
+                _, member_type = lhs.lookup(member_name)
+
+                if member_type is None:
+                    self.error(node.rhs, f"{member_name!r} is not a member of {lhs.name!r}")
+                return member_type
+
             lhs = self.expression(node.lhs)
             rhs = self.expression(node.rhs)
 
             if lhs is None or rhs is None:
                 return None
 
-            if isinstance(lhs, PointerType) or isinstance(rhs, PointerType):
+            if lhs.isa(PointerType) or rhs.isa(PointerType):
                 self.error(node.op, f"No pointer arithmatic allowed")
                 return None
-            elif isinstance(lhs, FuncType) or isinstance(rhs, FuncType):
+            elif lhs.isa(FuncType) or rhs.isa(FuncType):
                 self.error(node.op, f"Can not use binary operator on a function")
                 return None
+
 
             if node.op == TokenEnum.Addition:
                 if lhs != rhs:
@@ -244,14 +292,14 @@ class Typechecker:
                 if lhs != rhs:
                     self.error(node.op, f"lhs does not have the same type as rhs")
                     return None
-                return lhs
+                return lhs 
             else:
                 raise NotImplementedError(node.op)
         elif node.isa(ast.Literal):
             if node.token == TokenEnum.IntegerLiteral:
                 return IntType(None)
             elif node.token == TokenEnum.StringLiteral:
-                return SliceType(UintType(node.token, 8), node.token.length)
+                return SliceType(UintType(8), node.token.length)
             elif node.token == TokenEnum.FloatLiteral:
                 return FloatType(None)
             else:
@@ -272,49 +320,74 @@ class Typechecker:
 
             if typ.isa(FuncType):
                 if not node.expr.isa(ast.CodeBlock):
-                    self.error(node.name, "Function should be initialised to a code block")
+                    self.error(node.expr, "Function can only be initialised to a code block")
                     return
 
                 self.symbol_stack.append(SymbolTable())
-                self.func_stack.append(typ)
+                self.block_stack.append(name)
 
-                for arg in typ.args: # Tuple[name, Type]
+                for arg in typ.args: # tuple[name, Type]
                     self.insert(*arg)
 
                 for expr in node.expr.statements:
                     self.statement(expr)
 
-                self.func_stack.pop()
+                self.block_stack.pop()
                 self.symbol_stack.pop()
                 return
             
-            #if node.expr.isa(ast.CodeBlock):
-            #    self.symbol_stack.append(SymbolTable())
-            #    for expr in node.expr.statements:
-            #        self.statement(expr)
-            #    self.symbol_stack.pop()
-            #    return
-
-            val = self.statement(node.expr)
+            val = self.expression(node.expr)
             if (typ.isa(IntType) or typ.isa(UintType)) and (val.isa(IntType) or val.isa(UintType)):
                 return
 
             self.error(node.expr.token, f"value does not have same type as declared variable")
         elif node.isa(ast.ReturnStmt):
             expr = self.expression(node.expr)
+
+            assert len(self.block_stack) > 0
             
-            if expr != self.func_stack[-1].ret:
-                self.error(node.return_token,
+            _, func_type = self.lookup(self.block_stack[-1])
+            if expr != func_type.ret:
+                self.error(node,
                     "Value does not have the same type as function return value")
                 return
         else:
             return self.expression(node)
 
 
+    def compound_type(self, node):
+        name = "anonymus"
+        if node.name is not None:
+            name = self.src.get_token_string(node.name)
+
+        if node.which != TokenEnum.Struct:
+            raise NotImplementedError("node.which != TokenEnum.Struct")
+        
+        struct = StructType(name, SymbolTable())
+
+        self.insert(name, struct)
+
+        self.symbol_stack.append(struct.symbols)
+        self.block_stack.append(struct)
+
+        for decl in node.members.statements:
+            if decl.isa(ast.Declaration):
+                self.statement(decl)
+            else:
+                NotImplementedError(f"node.members[i].isa({decl})")
+
+        self.block_stack.pop()
+        self.symbol_stack.pop()
+
+
     def module(self, node):
         for stmt in node.statements:
             if stmt.isa(ast.Declaration):
                 self.statement(stmt)
+            elif stmt.isa(ast.CompoundType):
+                if stmt.name is None:
+                    self.error(stmt, "Module scope can not have anonymus structs")
+                self.compound_type(stmt)
             elif stmt.isa(ast.BinaryExpr):
                 self.error(stmt.op, "Module scope can only have declarations")
             else:
@@ -328,7 +401,7 @@ class Typechecker:
         # == 1 because of builtins is in its own table
         assert len(self.symbol_stack) == 1, "Something left on the stack"
 
-        assert len(self.func_stack) == 0
+        assert len(self.block_stack) == 0
 
         return self.num_errors
 

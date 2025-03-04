@@ -4,7 +4,7 @@ from lexer import Lexer
 
 import ast_ as ast
 
-PARSER_DEBUG: bool = False
+PARSER_DEBUG: bool = 0 # note: bool is a subclass of int
 parser_debug_uid: int = 0
 
 def parser_func(func):
@@ -50,6 +50,13 @@ class Parser:
         else:
             return self.next()
 
+    def optional(self, typ):
+        if self.current != typ:
+            return None
+        else:
+            return self.next() 
+
+
     @parser_func
     def primary_expr(self):
         if self.current.type == TokenEnum.Identifier:
@@ -94,7 +101,7 @@ class Parser:
             if self.current != TokenEnum.Identifier:
                 self._error(f"Expected identifier but got {self.current.type.name}")
                 return None
-            member = ast.Literal(self.next())
+            member = ast.Identifier(self.expect(TokenEnum.Identifier))
             return ast.BinaryExpr(op, primary, member)
 
         elif self.current.type == TokenEnum.LeftParen:
@@ -212,6 +219,13 @@ class Parser:
         return decl
 
     @parser_func
+    def compound_type(self):
+        which = self.next()
+        name = self.optional(TokenEnum.Identifier)
+        members = self.code_block()
+        return ast.CompoundType(which, name, members)
+
+    @parser_func
     def return_statement(self):
         ret = self.expect(TokenEnum.Return)
         expr = self.expression()
@@ -225,6 +239,8 @@ class Parser:
         elif self.current == TokenEnum.Newline:
             self.next()
             return None
+        elif self.current == TokenEnum.Struct:
+            return self.compound_type()
         elif self.current.type == TokenEnum.Return:
             return self.return_statement()
         else:

@@ -27,6 +27,7 @@ class SymbolTable:
         return val
 
     def get(self, name):
-        return self.symbols.get(name)
+        val = self.symbols.get(name)
+        return name, val
 
 

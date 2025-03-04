@@ -78,13 +78,13 @@ class TokenEnum(IntEnum):
     Continue = auto()
     Break = auto()
     Return = auto()
-    Goto = auto()
 
     Pub = auto()
     Const = auto()
-    Macro = auto()
     Extern = auto()
     Inline = auto()
+
+    Struct = auto()
 
     Module = auto()
     Import = auto()

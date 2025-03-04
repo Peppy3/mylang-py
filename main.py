@@ -56,7 +56,11 @@ def main() -> int:
 
 
     typechecker = Typechecker(src)
-    typechecker.typecheck(ast)
+    nun_errors = typechecker.typecheck(ast)
+
+    if num_errors:
+        print(f"Got {num_errors} error(s)")
+        return 1
 
     # print("=============================")
     # print("generating IR ...")

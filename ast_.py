@@ -103,7 +103,7 @@ class UnaryExpr(Node):
     def walk(self, visitor):
         if self.expr is not None: self.expr.walk(visitor)
 
-    def pos(self): return self.op.pos
+    def pos(self): return self.op.position
 
     def end(self): return self.expr.end()
 
@@ -118,7 +118,7 @@ class BinaryExpr(Node):
         if self.lhs is not None: self.lhs.walk(visitor)
         if self.rhs is not None: self.rhs.walk(visitor)
 
-    def pos(self): return self.lhs.pos
+    def pos(self): return self.lhs.position
 
     def end(self): return self.rhs.end()
 
@@ -136,7 +136,7 @@ class FuncType(Node):
         
         visitor.visitor(self.ret)
 
-    def pos(self): return self.left_paren.pos
+    def pos(self): return self.left_paren.position
 
     def end(self): return self.ret.end()
 
@@ -149,22 +149,7 @@ class ReturnStmt(Node):
     def walk(self, visitor):
         if self.expr is not None: self.expr.walk(visitor)
 
-    def pos(self): return self.ret.pos
-
-    def end(self): return self.expr.end()
-
-@dataclass(slots=True, repr=True)
-class Declaration(Node):
-    name: Token
-    type_expr: Node
-    expr: Node | None = None
-
-    @walk_func
-    def walk(self, visitor):
-        if self.type_expr is not None: self.type_expr.walk(visitor)
-        if self.expr is not None: self.expr.walk(visitor)
-
-    def pos(self): return self.name.pos
+    def pos(self): return self.ret.position
 
     def end(self): return self.expr.end()
 
@@ -178,9 +163,40 @@ class CodeBlock(Node):
     def walk(self, visitor):
         for stmt in self.statements: visitor.visit(self)
 
-    def pos(self): return self.left_curly.pos
+    def pos(self): return self.left_curly.position
 
-    def end(self): return self.right_curly.pos + 1 # len('{')
+    def end(self): return self.right_curly.position + 1 # len('}')
+
+@dataclass(slots=True, repr=True)
+class CompoundType(Node):
+    which: Token
+    name: Token | None
+    members: CodeBlock
+
+    @walk_func
+    def walk(self, visitor):
+        if self.type_expr is not None: self.type_expr.walk(visitor)
+        if self.expr is not None: self.expr.walk(visitor)
+
+    def pos(self): return self.which.position
+
+    def end(self): return self.members.end()
+
+@dataclass(slots=True, repr=True)
+class Declaration(Node):
+    name: Token
+    type_expr: Node
+    expr: Node | None = None
+
+    @walk_func
+    def walk(self, visitor):
+        if self.type_expr is not None: self.type_expr.walk(visitor)
+        if self.expr is not None: self.expr.walk(visitor)
+
+    def pos(self): return self.name.position
+
+    def end(self): return self.expr.end()
+
 
 @dataclass(slots=True, repr=True)
 class Module(Node):
@@ -191,7 +207,7 @@ class Module(Node):
     def walk(self, visitor):
         for stmt in self.statements: visitor.visit(self)
 
-    def pos(self): return self.name.pos
+    def pos(self): return self.name.position
 
     def end(self): return self.statements[-1].end()
 

@@ -2,13 +2,13 @@ module main
 
 foo: int = 42 + 27 * 64
 
-Point2D: struct {
-    x: f32
-    y: f32
+struct List {
+    val: int
+    next: *List 
 }
 
 # Vec3 is a value with type struct which is defined to a block of code
-Vec3: struct {
+struct Vec3 {
     x: f32
     y: f32
     z: f32
@@ -20,8 +20,8 @@ Vec3: struct {
 
 /*
 # list is just a macro funciton which gives out a code block (struct is also just a code block)
-$list: (T: type) -> struct {
-    return {
+$List: (T: type) -> type {
+    return struct {
         length: uint
         capacity: uint
         data: *T

@@ -2,27 +2,29 @@ from parser_file import ParserFile
 from tokens import Token, TokenEnum
 
 _KEYWORDS: dict = {
-    "if":       TokenEnum.If,
-    "else":     TokenEnum.Else,
-    "switch":   TokenEnum.Switch,
-    "case":     TokenEnum.Case,
-    "default":  TokenEnum.Default,
-    "while":    TokenEnum.While,
-    "for":      TokenEnum.For,
+    "if": TokenEnum.If,
+    "else": TokenEnum.Else,
+
+    "switch": TokenEnum.Switch,
+    "case": TokenEnum.Case,
+    "default": TokenEnum.Default,
+
+    "while": TokenEnum.While,
+    "for": TokenEnum.For,
     "continue": TokenEnum.Continue,
-    "break":    TokenEnum.Break,
-    "const":    TokenEnum.Const,
-    "macro":    TokenEnum.Macro,
-    "extern":   TokenEnum.Extern,
-    "pub":      TokenEnum.Pub,
-    "inline":   TokenEnum.Inline,
-    "return":   TokenEnum.Return,
-    "module":   TokenEnum.Module,
-    "import":   TokenEnum.Import,
-    "as":       TokenEnum.As,
-    "not":      TokenEnum.BoolNot,
-    "and":      TokenEnum.BoolAnd,
-    "or":       TokenEnum.BoolOr,
+    "break": TokenEnum.Break,
+    "return": TokenEnum.Return,
+
+    "pub": TokenEnum.Pub,
+    "const": TokenEnum.Const,
+    "extern": TokenEnum.Extern,
+    "inline": TokenEnum.Inline,
+
+    "struct": TokenEnum.Struct,
+
+    "module": TokenEnum.Module,
+    "import": TokenEnum.Import,
+    "as": TokenEnum.As,
 }
 
 # come on python, I want this function so badly

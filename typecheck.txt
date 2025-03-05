@@ -2,6 +2,9 @@ module testing
 
 works: i32 = 5
 fails: u32 = "hi"
+str: u8[] = "hello world"
+str_works: u8[13] = "hello world"
+str_fails: u8[5] = "hello world"
 
 main: () -> i32 {
     works2: int = 3

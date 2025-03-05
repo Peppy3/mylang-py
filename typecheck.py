@@ -2,6 +2,7 @@ from tokens import Token, TokenEnum
 import ast_ as ast
 from symbol_table import SymbolTable
 from collections import abc
+from evaluate import Evaluator
 
 class Type:
     def __eq__(self, other):
@@ -158,12 +159,13 @@ BUILTIN_TYPES: list = [
 
 
 class Typechecker:
-    __slots__ = "symbol_stack", "block_stack", "src", "num_errors"
+    __slots__ = "symbol_stack", "block_stack", "src", "num_errors", "evaluator"
     def __init__(self, src):
         self.symbol_stack = [SymbolTable(BUILTIN_TYPES)]
         self.block_stack = []
         self.src = src
         self.num_errors = 0
+        self.evaluator = Evaluator(self.src)
 
         
     def error(self, token, msg):
@@ -227,7 +229,8 @@ class Typechecker:
             if node.subscript is None:
                 return SliceType(member_typ)
             else:
-                raise NotImplementedError("sized and raw slice types")
+                size = self.evaluator.math(node.subscript)
+                return SliceType(member_typ, size)
         else:
             raise NotImplementedError(node)
 
@@ -375,7 +378,7 @@ class Typechecker:
             elif typ.isa(SliceType) and val.isa(SliceType):
                 # allow for slice type lengths that are greater or equal than the actual value
                 if typ.length is not None and typ.length < val.length:
-                    self.error(node.expr, f"Slice must be a length of {typ.length} or greater")
+                    self.error(node.type_expr.left_square, f"Slice must be a length of {val.length} or greater")
                 else:
                     typ = val
                 return

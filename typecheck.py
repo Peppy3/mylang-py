@@ -22,9 +22,6 @@ class PointerType(Type):
     __str__ = lambda self: f"*{str(self.to)}"
     __eq__ = lambda self, other: isinstance(other, Pointer) and self.to == other.to
 
-class BlockType(Type):
-    __str__ = lambda self: "block"
-
 class TypeType(Type):
     __str__ = lambda self: "type"
 

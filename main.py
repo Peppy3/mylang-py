@@ -1,11 +1,12 @@
 from pprint import pprint, pformat
 import argparse
+import time
 
 from parser_file import ParserFile
 from lexer import Lexer
 from parser_ import parse
 import ast_ as ast
-from typecheck import Typechecker
+#from typecheck import Typechecker
 
 from ir import generator
 
@@ -44,7 +45,11 @@ def main() -> int:
     args = parse_args()
 
     src = ParserFile(args.input_file)
+    
+    time_start = time.perf_counter()
     ast, num_errors = parse(args.input_file, src)
+    time_end = time.perf_counter()
+    print(f"Parsing took {time_end - time_start :.3f}s")
 
     if num_errors:
         print(f"Got {num_errors} error(s)")
@@ -55,22 +60,21 @@ def main() -> int:
         # return 0
 
 
-    typechecker = Typechecker(src)
-    nun_errors = typechecker.typecheck(ast)
+    #typechecker = Typechecker(src)
+    #nun_errors = typechecker.typecheck(ast)
+
+    #if num_errors:
+    #    print(f"Got {num_errors} error(s)")
+    #    return 1
+
+    time_start = time.perf_counter()
+    num_errors, rep = generator.generate(src, ast)
+    time_end = time.perf_counter()
+    print(f"Generating IR took {time_end - time_start :.3f}s")
 
     if num_errors:
-        print(f"Got {num_errors} error(s)")
-        return 1
-
-    # print("=============================")
-    # print("generating IR ...")
-    #
-    # num_errors, rep = generator.generate(src, ast)
-    # if num_errors:
-    #     print(f"Got {num_errors} error(s) when generating IR")
-    #     return 1 
-
-    # print("Passed IR generation")
+        print(f"Got {num_errors} error(s) when generating IR")
+        return 1 
 
     return 0
 

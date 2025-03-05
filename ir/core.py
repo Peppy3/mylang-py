@@ -1,35 +1,44 @@
 from enum import Enum, auto
 from weakref import proxy
 
-
-#
-# Explanation:
-# 
-# The IR consists of blocks.
-# A block can has blocks and values in its symbol table.
-# Yes, blocks are also treated as values
-# Child blocks can reference it's parent block directly
-#
-
+# all operations should start with (OpEnum, ast.Node, is_type_expr, ...)
 class OpEnum(Enum):
-    MOVE = auto()
-    RETURN = auto()
-    CALL = auto()
+    # simple no operation (probably not needed)
+    NOP = auto()
+
+    # (..., name)
+    MODULE = auto()
+    # (..., is_type_expr=False, name, typ, val)
+    VAR_DECL = auto()
+    # (..., name, ret_val, args: list[(name, type)], body: list | None)
+    FUNC_DECL = auto()
+
+    # (..., ret, typ_expr, is_raw, length: int | None)
+    SLICE_TYPE = auto()
+    # (..., which, name, block)
+    COMPOUND_TYPE = auto()
+    # (..., ret, expr)
+    POINTER_TYPE = auto()
+
+    # (..., ret_val: uid | None)
+    RETURN_STMT = auto()
+
+    # (..., ret, args: list[arg, arg, ...])
+    FUNC_CALL = auto()
+
+    # (..., slice, idx: uid)
+    SLICE_INDEXING = auto()
+
+    # Binary operations
+    # (..., ret, lhs, rhs)
+    BIN_ADD = auto()
+    BIN_MUL = auto()
     MEMBER_ACCESS = auto()
-    ADD = auto()
-    MUL = auto()
 
 
-class Instruction:
-    __slots__ = "op", "args"
-    def __init__(self, op: OpEnum, *args):
-        self.op = op
-        self.args = args
-    
-    def dissasemble(self):
-        gen = (arg.dissasemble() if isinstance(arg, Block) else str(arg) for arg in self.args)
-        return f"{self.op.name} " + ", ".join(gen)
-
+# just a tuple (there is no decently fast way to type this)
+def Instr(*args):
+    return tuple(args)
 
 class Type:
     __slots__ = ("token",)
@@ -131,7 +140,6 @@ class Value:
     __slots__ = "token", "type", "name"
     def __init__(self, token, name, typ):
         self.token = token
-        self.type = typ
         self.name = name
 
     ref = lambda self: self
@@ -148,32 +156,9 @@ class Constant(Type):
 
     __repr__ = lambda self: str(self.const)
 
-class SymbolTable:
-    __slots__ = ("symbols",)
-    def __init__(self, start_list=None):
-        if start_list is None:
-            self.symbols = dict()
-            return
-        self.symbols = {hash(val): val for val in start_list}
-    
-    __str__ = lambda self: '\n'.join(str(symbol) for symbol in self.symbols.values())
-    __contains__ = lambda self, lhs: lhs in self.symbols
-    __iter__ = lambda self: (symbol for symbol in self.symbols.values())
-    
-    def insert(self, val):
-        if val in self.symbols:
-            raise KeyError(f"{val.name} is already in symbol table")
-        self.symbols[hash(val)] = val
-        return val
-
-    def get(self, name):
-        return self.symbols.get(hash(name))
-
 class Block:
-    def __init__(self, typ, parent_block, name):
+    def __init__(self, parent_block):
         self.parent = parent_block
-        self.name = name
-        self.type = typ
         self.symbols = SymbolTable()
         self.instr_list = list()
         self.next_uid = 0
@@ -185,7 +170,7 @@ class Block:
     def dissasemble(self): 
         s = f"\n\n{self.name}:\n"
         s += str(self.symbols) + "\n"
-        s += "\n".join(instr.dissasemble() for instr in self.instr_list)
+        s += "\n".join(repr(instr) for instr in self.instr_list)
         return s + "\n"
 
     def __enter__(self): 
@@ -206,7 +191,7 @@ class Block:
 
     def block(self, typ, name=None):
         name = self.gen_uid_or_name(name)
-        return self.symbols.insert(Block(typ, self, name))
+        return self.symbols.insert(Block(typ, proxy(self), name))
 
     def lookup(self, name):
         if (val := self.symbols.get(name)) is not None:
@@ -215,32 +200,6 @@ class Block:
             return self.parent.lookup(name)
         else:
             return None
-
-    def build_move(self, typ, lhs, rhs):
-        self.instr_list.append(Instruction(OpEnum.MOVE, typ, lhs, rhs))
-    
-    def build_ret(self, typ, val):
-    	self.instr_list.append(Instruction(OpEnum.RETURN, typ, val))
-
-    def build_call(self, typ, func_name, args: list):
-    	returned = self.value(None, typ)
-    	self.instr_list.append(Instruction(OpEnum.CALL, returned, func_name, args))
-    	return returned
-
-    def build_member_access(self, typ, struct, member):
-    	returned = self.value(None, typ)
-    	self.instr_list.append(Instruction(OpEnum.MEMBER_ACCESS, returned, struct, member))
-    	return returned
-
-    def build_add(self, typ, lhs, rhs):
-    	returned = self.value(None, typ)
-    	self.instr_list.append(Instruction(OpEnum.ADD, returned, typ, lhs, rhs))
-    	return returned
-
-    def build_mul(self, typ, lhs, rhs):
-    	returned = self.value(None, typ)
-    	self.instr_list.append(Instruction(OpEnum.MUL, returned, typ, lhs, rhs))
-    	return returned
 
 
 if __name__ == "__main__":

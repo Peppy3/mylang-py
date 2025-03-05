@@ -9,14 +9,14 @@ struct List {
     next: *List 
 }
 
-# Vec3 is a value with type struct which is defined to a block of code
+# A normal Vec3
 struct Vec3 {
     x: f32
     y: f32
     z: f32
 
     dot: (lhs: Vec3, rhs: Vec3) -> f32 {
-        return lhs.x + rhs.x * lhs.y + rhs.y * lhs.z + rhs.y
+        return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.y
     }
 }
 

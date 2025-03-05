@@ -184,6 +184,9 @@ class CodeBlock(Node):
 
     def end(self): return self.right_curly.position + 1 # len('}')
 
+    def __iter__(self):
+        return iter(self.statements)
+
 @dataclass(slots=True, repr=True)
 class CompoundType(Node):
     which: Token
